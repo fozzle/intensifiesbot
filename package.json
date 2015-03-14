@@ -9,6 +9,8 @@
   "author": "Kyle Petrovich",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.12.2"
+    "express": "^4.12.2",
+    "node-bing-api": "^1.2.0",
+    "request": "^2.53.0"
   }
 }
