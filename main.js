@@ -1,7 +1,7 @@
 var express = require('express'),
   app = express(),
   config = require('./config.json'),
-  execSync = require('child_process').execSync,
+  childProcess = require('child_process'),
   fs = require('fs'),
   request = require('request'),
   Bing = require('node-bing-api')({accKey: config.bingKey});
@@ -14,30 +14,35 @@ app.get('/', function(req, res) {
       res.send("<h1>" + word + "</h1><img src='" + result + "' />");
       var lastPathComponent = result.split("/"),
         fileParts = lastPathComponent[lastPathComponent.length - 1].split(".");
-        extension = fileParts[1],
-        filename = fileParts[0];
 
-      console.log(fileParts);
       download(result, fileParts.join('.'), function() {
-        console.log(execSync);
-        execSync('convert scrap/' + fileParts.join('.') + ' -page +5+0 -background white -flatten scrap/' + filename + '-1.'+ extension);
-        execSync('convert scrap/' + fileParts.join('.') + ' -page +0+5 -background white -flatten scrap/' + filename + '-2.' + extension);
-        execSync('convert scrap/' + fileParts.join('.') + ' -page -5+0 -background white -flatten scrap/' + filename + '-3.' + extension);
-        execSync('convert scrap/' + fileParts.join('.') + ' -page +0-5 -background white -flatten scrap/' + filename + '-4.' + extension);
-        execSync('convert -delay 4 `seq -f scrap/'+filename+'-%01g.'+extension+' 1 1 4` -coalesce scrap/'+ filename + '.gif');
+        convertToGif(fileParts, word);
       });
     });
   });
-//     exec('convert -v builds/pdf/book.html -o builds/pdf/book.pdf', function (error, stdout, stderr) {
-//   // output is in stdout
-// });
 });
+
+function convertToGif(fileParts, word) {
+  var extension = fileParts[1],
+  filename = fileParts[0];
+
+  // Create gif
+  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +2+0 -background white -flatten scrap/' + filename + '-1.'+ extension);
+  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +0+2 -background white -flatten scrap/' + filename + '-2.' + extension);
+  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page -2+0 -background white -flatten scrap/' + filename + '-3.' + extension);
+  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +0-2 -background white -flatten scrap/' + filename + '-4.' + extension);
+  childProcess.execSync('convert -delay 2 `seq -f scrap/'+filename+'-%01g.'+extension+' 1 1 4` -coalesce final/'+ filename + '.gif');
+  childProcess.execSync('convert final/' + filename + '.gif -stroke "#000" -strokewidth 1 -font Impact -pointsize 24 -gravity south -fill white -annotate +0+10 "[' + word + ' intensifies]" final/' + filename + '.gif');
+
+  // Cleanup
+  childProcess.exec('rm scrap/' + filename + '*');
+}
 
 function getRandomWord(callback) {
   request({
     url: "http://api.wordnik.com:80/v4/words.json/randomWord",
     qs: {
-      "includePartOfSpeech": "noun",
+      "includePartOfSpeech": "verb",
       "minCorpusCount": 10000,
       "api_key": config.wordnikKey
     },
