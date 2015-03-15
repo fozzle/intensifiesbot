@@ -1,4 +1,4 @@
-var config = require('./config.json'),
+var gconfig = require('./config.json'),
   childProcess = require('child_process'),
   fs = require('fs'),
   twitterAPI = require('node-twitter-api'),
@@ -39,7 +39,7 @@ function convertToGif(fileParts, word) {
   childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page -2+0 -background white -flatten scrap/' + filename + '-3.' + extension);
   childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +0-2 -background white -flatten scrap/' + filename + '-4.' + extension);
   childProcess.execSync('convert -delay 2 `seq -f scrap/'+filename+'-%01g.'+extension+' 1 1 4` -coalesce final/'+ filename + '.gif');
-  childProcess.execSync('convert final/' + filename + '.gif -stroke "#000" -strokewidth 1 -font Impact -pointsize 24 -gravity south -fill white -annotate +0+10 "[' + word + ' intensifies]" final/' + filename + '.gif');
+  childProcess.execSync('convert final/' + filename + '.gif -stroke "#000" -strokewidth 1 -font ' + config.font + ' -pointsize 24 -gravity south -fill white -annotate +0+10 "[' + word + ' intensifies]" final/' + filename + '.gif');
 
   // Cleanup
   childProcess.exec('rm scrap/' + filename + '*');
