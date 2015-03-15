@@ -3,13 +3,27 @@ var express = require('express'),
   config = require('./config.json'),
   childProcess = require('child_process'),
   fs = require('fs'),
+  twitterAPI = require('node-twitter-api'),
+  twitter = new twitterAPI({
+    consumerKey: config.twitterConsumerKey,
+    consumerSecret: config.twitterConsumerSecret,
+    callback: ''
+  }),
+  nlp = require('nlp_compromise'),
   request = require('request'),
   Bing = require('node-bing-api')({accKey: config.bingKey});
 
 app.get('/', function(req, res) {
 
   getRandomWord(function(word) {
-    word = word.word;
+    word = word.word.toLowerCase();
+    var conjugated = nlp.verb(word).conjugate()
+    console.log(conjugated);
+    if (!conjugated.gerund) {
+      return;
+    } else {
+      word = conjugated.gerund;
+    }
     getRandomImageForNoun(word, function(err, result) {
       res.send("<h1>" + word + "</h1><img src='" + result + "' />");
       var lastPathComponent = result.split("/"),
@@ -36,6 +50,24 @@ function convertToGif(fileParts, word) {
 
   // Cleanup
   childProcess.exec('rm scrap/' + filename + '*');
+
+  twitter.statuses("update_with_media", {
+        status: "[" + word + " intensifies]",
+        media: [
+        "final/"+filename+".gif",
+        ]
+    },
+    config.twitterAccessToken,
+    config.twitterAccessSecret,
+    function(error, data, response) {
+        if (error) {
+            // something went wrong
+            console.log(error);
+        } else {
+            // data contains the data sent by twitter
+            console.log(data);
+        }
+  });
 }
 
 function getRandomWord(callback) {
@@ -70,23 +102,10 @@ function getRandomImageForNoun(noun, callback) {
     callback(err, resultUrl);
   }, {
     imagefilters: {
-      size: "medium"
+      size: "medium",
+      style: "photo"
     }
   });
-}
-
-function intensifyImage(image, callback) {
-  var count = 0;
-  for (var i = 0; i < 4; i++) {
-    exec('convert ' + image + ' -background black -virtual-pixel background -page +5+0 ' + image + 'temp' + i + '.png', function() {
-      count++;
-
-      if (count > 3) {
-        callback();
-      }
-    })
-  }
-
 }
 
 var server = app.listen(3000, function() {
