@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.12.2",
+    "gm": "^1.17.0",
     "jade": "^1.9.2",
     "nlp_compromise": "^0.3.4",
     "node-bing-api": "^1.2.0",

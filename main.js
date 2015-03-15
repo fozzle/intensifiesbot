@@ -3,6 +3,7 @@ var express = require('express'),
   config = require('./config.json'),
   childProcess = require('child_process'),
   fs = require('fs'),
+  gm = require('gm'),
   nlp = require('nlp_compromise'),
   request = require('request'),
   Bing = require('node-bing-api')({accKey: config.bingKey});
@@ -33,17 +34,34 @@ function convertToGif(fileParts, word, res) {
   filename = fileParts[0];
 
   // Create gif
-  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +2+0 -background white -flatten scrap/' + filename + '-1.'+ extension);
-  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +0+2 -background white -flatten scrap/' + filename + '-2.' + extension);
-  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page -2+0 -background white -flatten scrap/' + filename + '-3.' + extension);
-  childProcess.execSync('convert scrap/' + fileParts.join('.') + ' -page +0-2 -background white -flatten scrap/' + filename + '-4.' + extension);
-  childProcess.execSync('convert -delay 2 `seq -f scrap/'+filename+'-%01g.'+extension+' 1 1 4` -coalesce final/'+ filename + '.gif');
-  childProcess.execSync('convert final/' + filename + '.gif -stroke "#000" -strokewidth 1 -font '+ config.font +' -pointsize 24 -gravity south -fill white -annotate +0+10 "[' + word + ' intensifies]" final/' + filename + '.gif');
+  var counter = 0,
+    originalImage = require('fs').readFileSync('scrap/' + fileParts.join('.')),
+    offsets = ['+2+0', '+0+2', '-2+0', '+0-2'];
 
-  // Cleanup
-  childProcess.exec('rm scrap/' + filename + '*');
-
-  res.render("result", {word: word, url: filename + ".gif"});
+  gm(originalImage, fileParts.join('.'))
+    .options({imageMagick: true})
+    .size(function(err, val) {
+      for (var i = 0; i <= 3; i++) {
+        gm(originalImage)
+          .options({imageMagick: true})
+          .page(val.width, val.height, offsets[i])
+          .flatten()
+          .write('scrap/' + filename + '-' + i +'.' + extension, function() {
+            counter++;
+            if (counter === 4) {
+              childProcess.execSync('convert -delay 2 `seq -f scrap/'+filename+'-%01g.'+extension+' 0 1 3` -coalesce final/'+ filename + '.gif');
+              childProcess.execSync('convert final/' + filename + '.gif -stroke "#000" -strokewidth 1 -font '+ config.font +' -pointsize 24 -gravity south -fill white -annotate +0+10 "[' + word + ' intensifies]" final/' + filename + '.gif');
+              childProcess.exec('rm scrap/' + filename + '*');
+              gm('final/'+filename+'.gif')
+                .options({imageMagick: true})
+                .crop(val.width - 4, val.height - 4, 2, 2)
+                .write('final/' + filename + '.gif', function() {
+                  res.render("result", {word: word, url: filename + ".gif"});
+                });
+            }
+          })
+      }
+    });
 }
 
 function getRandomWord(callback) {
@@ -63,9 +81,6 @@ function getRandomWord(callback) {
 
 function download(uri, filename, callback){
   request.head(uri, function(err, res, body){
-    console.log('content-type:', res.headers['content-type']);
-    console.log('content-length:', res.headers['content-length']);
-
     request(uri).pipe(fs.createWriteStream('scrap/' + filename)).on('close', callback);
   });
 };
