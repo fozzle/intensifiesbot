@@ -1,6 +1,4 @@
-var express = require('express'),
-  app = express(),
-  config = require('./config.json'),
+var config = require('./config.json'),
   childProcess = require('child_process'),
   fs = require('fs'),
   twitterAPI = require('node-twitter-api'),
