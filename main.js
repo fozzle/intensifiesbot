@@ -3,40 +3,32 @@ var express = require('express'),
   config = require('./config.json'),
   childProcess = require('child_process'),
   fs = require('fs'),
-  twitterAPI = require('node-twitter-api'),
-  twitter = new twitterAPI({
-    consumerKey: config.twitterConsumerKey,
-    consumerSecret: config.twitterConsumerSecret,
-    callback: ''
-  }),
   nlp = require('nlp_compromise'),
   request = require('request'),
   Bing = require('node-bing-api')({accKey: config.bingKey});
 
+app.use(express.static(__dirname + '/final'));
+app.set('views', './views')
+app.set('view engine', 'jade');
 app.get('/', function(req, res) {
 
-  getRandomWord(function(word) {
-    word = word.word.toLowerCase();
-    var conjugated = nlp.verb(word).conjugate()
-    console.log(conjugated);
-    if (!conjugated.gerund) {
-      return;
-    } else {
-      word = conjugated.gerund;
-    }
-    getRandomImageForNoun(word, function(err, result) {
-      res.send("<h1>" + word + "</h1><img src='" + result + "' />");
-      var lastPathComponent = result.split("/"),
-        fileParts = lastPathComponent[lastPathComponent.length - 1].split(".");
+  if (!req.query.word) {
+    res.render('index');
+    return;
+  }
 
-      download(result, fileParts.join('.'), function() {
-        convertToGif(fileParts, word);
-      });
+  var word = req.query.word.toLowerCase();
+  getRandomImageForNoun(word, function(err, result) {
+    var lastPathComponent = result.split("/"),
+      fileParts = lastPathComponent[lastPathComponent.length - 1].split(".");
+
+    download(result, fileParts.join('.'), function() {
+      convertToGif(fileParts, word, res);
     });
   });
 });
 
-function convertToGif(fileParts, word) {
+function convertToGif(fileParts, word, res) {
   var extension = fileParts[1],
   filename = fileParts[0];
 
@@ -51,23 +43,7 @@ function convertToGif(fileParts, word) {
   // Cleanup
   childProcess.exec('rm scrap/' + filename + '*');
 
-  twitter.statuses("update_with_media", {
-        status: "[" + word + " intensifies]",
-        media: [
-        "final/"+filename+".gif",
-        ]
-    },
-    config.twitterAccessToken,
-    config.twitterAccessSecret,
-    function(error, data, response) {
-        if (error) {
-            // something went wrong
-            console.log(error);
-        } else {
-            // data contains the data sent by twitter
-            console.log(data);
-        }
-  });
+  res.render("result", {word: word, url: filename + ".gif"});
 }
 
 function getRandomWord(callback) {
