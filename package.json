@@ -14,7 +14,7 @@
     "jade": "^1.9.2",
     "nlp_compromise": "^0.3.4",
     "node-bing-api": "^1.2.0",
-    "node-twitter-api": "^1.5.0",
+    "node-twitter-api": "^1.6.3",
     "request": "^2.53.0"
   }
 }
